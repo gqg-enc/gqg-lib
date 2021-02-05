@@ -1,0 +1,15 @@
+[package]
+name = "gqg-lib"
+version = "1.0.0"
+authors = ["gqg Authors"]
+edition = "2018"
+
+[dependencies]
+base64 = "0.13.0"
+lz4-compress = "0.1.1"
+sodiumoxide = "0.2.6"
+anyhow = "1.0.38"
+serde = "1.0.123"
+serde_derive = "1.0.123"
+toml = "0.5.8"
+dirs = "3.0.1"
