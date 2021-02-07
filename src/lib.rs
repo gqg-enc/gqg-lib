@@ -116,6 +116,9 @@ fn validate_file_name(file_name: &str) -> bool {
     if file_name.find("..").is_some() {
         return false;
     }
+    if file_name.starts_with(".") {
+        return false;
+    }
     return true;
 }
 
@@ -161,6 +164,9 @@ pub fn decode(myself: &SecretKey, mut payload: String) -> Result<Decoded, GqgErr
         let separator = separator.ok_or(GqgError::InvalidOuterEncoding)?;
         let file_name = std::str::from_utf8(&payload[..separator]).map_err(|_| GqgError::InvalidFileName)?;
         payload = &payload[separator+1..];
+        if !validate_file_name(file_name) {
+            return Err(GqgError::InvalidFileName);
+        }
         file = Some(file_name.to_string());
     }
     else {
