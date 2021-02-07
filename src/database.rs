@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde_derive::{Serialize, Deserialize};
+use std::io::prelude::*;
 
 type SecretKey = sodiumoxide::crypto::box_::SecretKey;
 type PublicKey = sodiumoxide::crypto::box_::PublicKey;
@@ -141,6 +142,7 @@ impl<'a> Database {
         if obj.file.identity.len() == 0 {
             eprintln!("Adding a default identity...");
             obj.add_identity("default".to_string()).unwrap();
+            obj.save();
         }
         return obj;
     }
@@ -155,6 +157,7 @@ impl<'a> Database {
         }
         self.file.misc.active_identity = name.to_string();
         self.dirty = true;
+        self.save();
         Ok(())
     }
 
@@ -189,6 +192,7 @@ impl<'a> Database {
         let (_, key) = sodiumoxide::crypto::box_::gen_keypair();
         self.file.identity.push(Identity { name, key: base64::encode(key) });
         self.dirty = true;
+        self.save();
         Ok(())
     }
 
@@ -222,6 +226,7 @@ impl<'a> Database {
         Self::validate_id(&key)?;
         self.file.friend.push(Friend { name, key });
         self.dirty = true;
+        self.save();
         Ok(())
     }
 
@@ -230,19 +235,27 @@ impl<'a> Database {
             if friend.name == name {
                 self.file.friend.remove(n);
                 self.dirty = true;
+                self.save();
                 return Ok(());
             }
         }
         return Err(anyhow!("Friend with that name doesn't exist."));
     }
+
+    fn save(&mut self) {
+        if self.dirty {
+            // TODO: make backup, so that the config file is not accidentally wiped.
+            let toml = toml::to_string(&self.file).unwrap();
+            let mut f = std::fs::File::create(Database::config_path()).expect("Could not write config file.");
+            f.write_all(toml.as_bytes()).expect("Could not write config file.");
+            f.sync_all().expect("Could not write config file.");
+        }
+        self.dirty = false;
+    }
 }
 
 impl std::ops::Drop for Database {
     fn drop(&mut self) {
-        if self.dirty {
-            // TODO: make backup, so that the config file is not accidentally wiped.
-            let toml = toml::to_string(&self.file).unwrap();
-            std::fs::write(Self::config_path(), toml).expect("Could not write to configuration file!");
-        }
+        self.save();
     }
 }
